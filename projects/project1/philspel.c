@@ -33,6 +33,36 @@
  */
 HashTable *dictionary;
 
+void checkWord(char *buffer, int pos) {
+  buffer[pos] = '\0';
+  char *str1 = malloc(sizeof(char) * (pos + 1)); // store word like "Hello"
+  char *str2 = malloc(sizeof(char) * (pos + 1)); // store word with all lowercase
+  strcpy(str1, buffer);
+  strcpy(str2, buffer);
+  int i = 1;
+  for (i = 1; i < pos; i++) {
+    if (str1[i] >= 'A' && str1[i] <= 'Z') {
+      str1[i] = str1[i] + ('a' - 'A');
+    }
+  }
+  for (i = 0; i < pos; i++) {
+    if (str2[i] >= 'A' && str2[i] <= 'Z') {
+      str2[i] = str2[i] + ('a' - 'A');
+    }
+  }
+  if (findData(dictionary, (void*)buffer) != NULL) {
+    fprintf(stdout, "%s", buffer);
+  } else if (findData(dictionary, (void*)str1) != NULL) {
+    fprintf(stdout, "%s", buffer);
+  } else if (findData(dictionary, (void*)str2) != NULL) {
+    fprintf(stdout, "%s", buffer);
+  } else {
+    fprintf(stdout, "%s [sic]", buffer);
+  }
+  free(str1);
+  free(str2);
+}
+
 /*
  * The MAIN routine.  You can safely print debugging information
  * to standard error (stderr) as shown and it will be ignored in 
@@ -70,7 +100,13 @@ int main(int argc, char **argv) {
  */
 unsigned int stringHash(void *s) {
   char *string = (char *)s;
-  // -- TODO --
+  const unsigned int BASE = 31;
+  unsigned int res = 0;
+  int i = 0;
+  for (i = 0; i < strlen(string); i++) {
+    res = (res * BASE + string[i]) % dictionary->size;
+  }
+  return res;
 }
 
 /*
@@ -80,7 +116,7 @@ unsigned int stringHash(void *s) {
 int stringEquals(void *s1, void *s2) {
   char *string1 = (char *)s1;
   char *string2 = (char *)s2;
-  // -- TODO --
+  return !strcmp(string1, string2);
 }
 
 /*
@@ -100,7 +136,21 @@ int stringEquals(void *s1, void *s2) {
  * arbitrarily long dictionary chacaters.
  */
 void readDictionary(char *dictName) {
-  // -- TODO --
+  FILE *fp;
+  fp = fopen(dictName, "r");
+  if (fp == NULL) {
+    fprintf(stderr, "Cannot open %s!\n", dictName);
+    exit(1);
+  }
+
+  char buffer[100];
+  while (fscanf(fp, "%s", buffer) == 1) {
+    int len = strlen(buffer);
+    char *key = malloc(sizeof(char) * (len + 1));
+    strcpy(key, buffer);
+    insertData(dictionary, (void*)key, (void*)key);
+  }
+  fclose(fp);
 }
 
 /*
@@ -125,5 +175,34 @@ void readDictionary(char *dictName) {
  * final 20% of your grade, you cannot assume words have a bounded length.
  */
 void processInput() {
-  // -- TODO --
+  int size = 50;
+  char *buffer = malloc(sizeof(char) * size);
+  int pos = 0;
+  while (1) {
+    int c = fgetc(stdin);
+    if (feof(stdin)) {
+      if (pos > 0) {
+        checkWord(buffer, pos);
+      }
+      break;
+    }
+    if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')) {
+      if (pos > 0) {
+        checkWord(buffer, pos);
+        pos = 0;
+      }
+      fprintf(stdout, "%c", c);
+    } else {
+      if (pos == size - 1) {
+        char *newBuffer = malloc(sizeof(char) * size * 2);
+        size *= 2;
+        buffer[pos] = '\0';
+        strcpy(newBuffer, buffer);
+        free(buffer);
+        buffer = newBuffer;
+      }
+      buffer[pos++] = c;
+    }
+  }
+  free(buffer);
 }
